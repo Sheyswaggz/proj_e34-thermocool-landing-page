@@ -1,507 +1,471 @@
 /**
- * ThermoCool Landing Page - Main JavaScript
- * 
- * Implements lazy loading, smooth scrolling, and interactive enhancements
- * for optimal performance and user experience.
- * 
- * @generated-from: task-004
- * @modifies: index.html
- * @dependencies: []
+ * Form Validation and Submission Handler
+ * Provides real-time validation, submission handling, and user feedback
  */
 
 (function() {
   'use strict';
 
-  /**
-   * Configuration object for application behavior
-   */
-  const CONFIG = Object.freeze({
-    LAZY_LOAD: {
-      ROOT_MARGIN: '50px',
-      THRESHOLD: 0.01,
-      FALLBACK_DELAY: 100
-    },
-    SMOOTH_SCROLL: {
-      BEHAVIOR: 'smooth',
-      BLOCK: 'start',
-      INLINE: 'nearest'
-    },
-    PERFORMANCE: {
-      DEBOUNCE_DELAY: 150,
-      THROTTLE_DELAY: 100
-    }
-  });
+  // Form state management
+  const formState = {
+    isSubmitting: false,
+    lastSubmission: null,
+    validationErrors: new Map(),
+  };
 
-  /**
-   * Logger utility for structured logging
-   */
-  const Logger = {
-    _log(level, message, context = {}) {
-      if (typeof console === 'undefined') return;
-      
-      const timestamp = new Date().toISOString();
-      const logEntry = {
-        timestamp,
-        level,
-        message,
-        ...context
-      };
-
-      console[level](
-        `[${timestamp}] [${level.toUpperCase()}] ${message}`,
-        context
-      );
+  // Validation rules
+  const validators = {
+    name: {
+      required: true,
+      minLength: 2,
+      maxLength: 100,
+      pattern: /^[a-zA-Z\s'-]+$/,
+      message: 'Please enter a valid name (letters, spaces, hyphens, and apostrophes only)',
     },
-
-    info(message, context) {
-      this._log('info', message, context);
+    email: {
+      required: true,
+      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+      message: 'Please enter a valid email address',
     },
-
-    warn(message, context) {
-      this._log('warn', message, context);
+    phone: {
+      required: true,
+      pattern: /^[\d\s\-\(\)\+]+$/,
+      minLength: 10,
+      message: 'Please enter a valid phone number',
     },
+    service: {
+      required: true,
+      message: 'Please select a service',
+    },
+    message: {
+      required: false,
+      maxLength: 1000,
+      message: 'Message must not exceed 1000 characters',
+    },
+  };
 
-    error(message, context) {
-      this._log('error', message, context);
-    }
+  // Rate limiting configuration
+  const RATE_LIMIT = {
+    maxAttempts: 3,
+    windowMs: 60000, // 1 minute
+    attempts: [],
   };
 
   /**
-   * Lazy loading implementation using Intersection Observer
-   * with fallback for older browsers
+   * Initialize form validation and submission handling
    */
-  class LazyLoader {
-    constructor() {
-      this.images = [];
-      this.observer = null;
-      this.initialized = false;
-    }
+  function initializeForm() {
+    const form = document.querySelector('.form');
+    if (!form) return;
 
-    /**
-     * Initialize lazy loading for all images
-     */
-    init() {
-      if (this.initialized) {
-        Logger.warn('LazyLoader already initialized');
-        return;
-      }
+    // Load persisted form data
+    loadFormData(form);
 
-      try {
-        this.images = Array.from(
-          document.querySelectorAll('img[loading="lazy"]')
-        );
+    // Set up real-time validation
+    setupRealtimeValidation(form);
 
-        if (this.images.length === 0) {
-          Logger.info('No lazy-loadable images found');
-          return;
-        }
+    // Set up form submission
+    setupFormSubmission(form);
 
-        if ('IntersectionObserver' in window) {
-          this._initIntersectionObserver();
-        } else {
-          this._fallbackLoad();
-        }
+    // Set up form persistence
+    setupFormPersistence(form);
 
-        this.initialized = true;
-        Logger.info('LazyLoader initialized', {
-          imageCount: this.images.length,
-          method: 'IntersectionObserver' in window ? 'observer' : 'fallback'
-        });
-      } catch (error) {
-        Logger.error('Failed to initialize LazyLoader', {
-          error: error.message,
-          stack: error.stack
-        });
-        this._fallbackLoad();
-      }
-    }
-
-    /**
-     * Initialize Intersection Observer for modern browsers
-     * @private
-     */
-    _initIntersectionObserver() {
-      const options = {
-        root: null,
-        rootMargin: CONFIG.LAZY_LOAD.ROOT_MARGIN,
-        threshold: CONFIG.LAZY_LOAD.THRESHOLD
-      };
-
-      this.observer = new IntersectionObserver(
-        this._handleIntersection.bind(this),
-        options
-      );
-
-      this.images.forEach(img => {
-        this.observer.observe(img);
-      });
-    }
-
-    /**
-     * Handle intersection events
-     * @private
-     * @param {IntersectionObserverEntry[]} entries
-     */
-    _handleIntersection(entries) {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
-          this._loadImage(img);
-          this.observer.unobserve(img);
-        }
-      });
-    }
-
-    /**
-     * Load individual image
-     * @private
-     * @param {HTMLImageElement} img
-     */
-    _loadImage(img) {
-      const src = img.getAttribute('src');
-      
-      if (!src) {
-        Logger.warn('Image missing src attribute', {
-          alt: img.getAttribute('alt')
-        });
-        return;
-      }
-
-      img.addEventListener('load', () => {
-        img.classList.add('loaded');
-        Logger.info('Image loaded successfully', { src });
-      }, { once: true });
-
-      img.addEventListener('error', () => {
-        img.classList.add('error');
-        Logger.error('Image failed to load', { src });
-      }, { once: true });
-
-      if (img.loading !== 'lazy') {
-        img.loading = 'lazy';
-      }
-    }
-
-    /**
-     * Fallback loading for browsers without Intersection Observer
-     * @private
-     */
-    _fallbackLoad() {
-      Logger.info('Using fallback lazy loading');
-      
-      setTimeout(() => {
-        this.images.forEach(img => {
-          this._loadImage(img);
-        });
-      }, CONFIG.LAZY_LOAD.FALLBACK_DELAY);
-    }
-
-    /**
-     * Cleanup resources
-     */
-    destroy() {
-      if (this.observer) {
-        this.observer.disconnect();
-        this.observer = null;
-      }
-      this.images = [];
-      this.initialized = false;
-      Logger.info('LazyLoader destroyed');
-    }
+    // Add ARIA live region for announcements
+    addAriaLiveRegion();
   }
 
   /**
-   * Smooth scrolling implementation for navigation links
+   * Set up real-time validation for form fields
    */
-  class SmoothScroller {
-    constructor() {
-      this.links = [];
-      this.initialized = false;
-    }
+  function setupRealtimeValidation(form) {
+    const fields = form.querySelectorAll('.form__input, .form__select, .form__textarea');
 
-    /**
-     * Initialize smooth scrolling for anchor links
-     */
-    init() {
-      if (this.initialized) {
-        Logger.warn('SmoothScroller already initialized');
-        return;
-      }
-
-      try {
-        this.links = Array.from(
-          document.querySelectorAll('a[href^="#"]')
-        );
-
-        if (this.links.length === 0) {
-          Logger.info('No anchor links found for smooth scrolling');
-          return;
-        }
-
-        this.links.forEach(link => {
-          link.addEventListener('click', this._handleClick.bind(this));
-        });
-
-        this.initialized = true;
-        Logger.info('SmoothScroller initialized', {
-          linkCount: this.links.length
-        });
-      } catch (error) {
-        Logger.error('Failed to initialize SmoothScroller', {
-          error: error.message,
-          stack: error.stack
-        });
-      }
-    }
-
-    /**
-     * Handle click events on anchor links
-     * @private
-     * @param {Event} event
-     */
-    _handleClick(event) {
-      const href = event.currentTarget.getAttribute('href');
-      
-      if (!href || href === '#') {
-        return;
-      }
-
-      const targetId = href.substring(1);
-      const targetElement = document.getElementById(targetId);
-
-      if (!targetElement) {
-        Logger.warn('Target element not found', { targetId });
-        return;
-      }
-
-      event.preventDefault();
-
-      try {
-        targetElement.scrollIntoView({
-          behavior: CONFIG.SMOOTH_SCROLL.BEHAVIOR,
-          block: CONFIG.SMOOTH_SCROLL.BLOCK,
-          inline: CONFIG.SMOOTH_SCROLL.INLINE
-        });
-
-        if (targetElement.hasAttribute('tabindex')) {
-          targetElement.focus();
-        } else {
-          targetElement.setAttribute('tabindex', '-1');
-          targetElement.focus();
-          targetElement.addEventListener('blur', () => {
-            targetElement.removeAttribute('tabindex');
-          }, { once: true });
-        }
-
-        if (window.history && window.history.pushState) {
-          window.history.pushState(null, '', href);
-        }
-
-        Logger.info('Smooth scroll completed', { targetId });
-      } catch (error) {
-        Logger.error('Smooth scroll failed', {
-          targetId,
-          error: error.message
-        });
-        targetElement.scrollIntoView();
-      }
-    }
-
-    /**
-     * Cleanup resources
-     */
-    destroy() {
-      this.links.forEach(link => {
-        link.removeEventListener('click', this._handleClick);
+    fields.forEach(field => {
+      // Validate on blur
+      field.addEventListener('blur', () => {
+        validateField(field);
       });
-      this.links = [];
-      this.initialized = false;
-      Logger.info('SmoothScroller destroyed');
-    }
-  }
 
-  /**
-   * Form validation and enhancement
-   */
-  class FormEnhancer {
-    constructor() {
-      this.form = null;
-      this.initialized = false;
-    }
-
-    /**
-     * Initialize form enhancements
-     */
-    init() {
-      if (this.initialized) {
-        Logger.warn('FormEnhancer already initialized');
-        return;
-      }
-
-      try {
-        this.form = document.querySelector('.form');
-
-        if (!this.form) {
-          Logger.info('No form found for enhancement');
-          return;
-        }
-
-        this.form.addEventListener('submit', this._handleSubmit.bind(this));
-
-        const inputs = this.form.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-          input.addEventListener('invalid', this._handleInvalid.bind(this));
-          input.addEventListener('blur', this._handleBlur.bind(this));
-        });
-
-        this.initialized = true;
-        Logger.info('FormEnhancer initialized');
-      } catch (error) {
-        Logger.error('Failed to initialize FormEnhancer', {
-          error: error.message,
-          stack: error.stack
-        });
-      }
-    }
-
-    /**
-     * Handle form submission
-     * @private
-     * @param {Event} event
-     */
-    _handleSubmit(event) {
-      const form = event.target;
-      
-      if (!form.checkValidity()) {
-        event.preventDefault();
-        
-        const firstInvalid = form.querySelector(':invalid');
-        if (firstInvalid) {
-          firstInvalid.focus();
-        }
-
-        Logger.warn('Form validation failed');
-        return;
-      }
-
-      Logger.info('Form submitted successfully');
-    }
-
-    /**
-     * Handle invalid input
-     * @private
-     * @param {Event} event
-     */
-    _handleInvalid(event) {
-      const input = event.target;
-      const errorMessage = input.validationMessage;
-
-      Logger.info('Input validation failed', {
-        field: input.name,
-        error: errorMessage
+      // Validate on input (debounced)
+      let validationTimeout;
+      field.addEventListener('input', () => {
+        clearTimeout(validationTimeout);
+        validationTimeout = setTimeout(() => {
+          if (field.value.length > 0 || formState.validationErrors.has(field.name)) {
+            validateField(field);
+          }
+        }, 300);
       });
-    }
-
-    /**
-     * Handle input blur for validation
-     * @private
-     * @param {Event} event
-     */
-    _handleBlur(event) {
-      const input = event.target;
-      
-      if (input.value && !input.checkValidity()) {
-        input.classList.add('invalid');
-      } else {
-        input.classList.remove('invalid');
-      }
-    }
-
-    /**
-     * Cleanup resources
-     */
-    destroy() {
-      if (this.form) {
-        this.form.removeEventListener('submit', this._handleSubmit);
-        
-        const inputs = this.form.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-          input.removeEventListener('invalid', this._handleInvalid);
-          input.removeEventListener('blur', this._handleBlur);
-        });
-      }
-      
-      this.form = null;
-      this.initialized = false;
-      Logger.info('FormEnhancer destroyed');
-    }
-  }
-
-  /**
-   * Application initialization and lifecycle management
-   */
-  class App {
-    constructor() {
-      this.lazyLoader = new LazyLoader();
-      this.smoothScroller = new SmoothScroller();
-      this.formEnhancer = new FormEnhancer();
-      this.initialized = false;
-    }
-
-    /**
-     * Initialize the application
-     */
-    init() {
-      if (this.initialized) {
-        Logger.warn('App already initialized');
-        return;
-      }
-
-      try {
-        Logger.info('Initializing ThermoCool application');
-
-        this.lazyLoader.init();
-        this.smoothScroller.init();
-        this.formEnhancer.init();
-
-        this.initialized = true;
-        Logger.info('ThermoCool application initialized successfully');
-      } catch (error) {
-        Logger.error('Failed to initialize application', {
-          error: error.message,
-          stack: error.stack
-        });
-      }
-    }
-
-    /**
-     * Cleanup and destroy the application
-     */
-    destroy() {
-      this.lazyLoader.destroy();
-      this.smoothScroller.destroy();
-      this.formEnhancer.destroy();
-      this.initialized = false;
-      Logger.info('ThermoCool application destroyed');
-    }
-  }
-
-  /**
-   * Initialize application when DOM is ready
-   */
-  function initializeApp() {
-    const app = new App();
-    app.init();
-
-    window.addEventListener('beforeunload', () => {
-      app.destroy();
     });
   }
 
+  /**
+   * Validate a single form field
+   */
+  function validateField(field) {
+    const fieldName = field.name;
+    const value = field.value.trim();
+    const rules = validators[fieldName];
+
+    if (!rules) return true;
+
+    // Remove existing error
+    clearFieldError(field);
+
+    // Required validation
+    if (rules.required && !value) {
+      setFieldError(field, `${getFieldLabel(field)} is required`);
+      return false;
+    }
+
+    // Skip other validations if field is empty and not required
+    if (!value && !rules.required) {
+      formState.validationErrors.delete(fieldName);
+      field.classList.remove('form__input--error', 'form__select--error', 'form__textarea--error');
+      field.classList.add('form__input--success', 'form__select--success', 'form__textarea--success');
+      return true;
+    }
+
+    // Pattern validation
+    if (rules.pattern && !rules.pattern.test(value)) {
+      setFieldError(field, rules.message);
+      return false;
+    }
+
+    // Length validation
+    if (rules.minLength && value.length < rules.minLength) {
+      setFieldError(field, `${getFieldLabel(field)} must be at least ${rules.minLength} characters`);
+      return false;
+    }
+
+    if (rules.maxLength && value.length > rules.maxLength) {
+      setFieldError(field, `${getFieldLabel(field)} must not exceed ${rules.maxLength} characters`);
+      return false;
+    }
+
+    // Field is valid
+    formState.validationErrors.delete(fieldName);
+    field.classList.remove('form__input--error', 'form__select--error', 'form__textarea--error');
+    field.classList.add('form__input--success', 'form__select--success', 'form__textarea--success');
+    
+    return true;
+  }
+
+  /**
+   * Set error state for a field
+   */
+  function setFieldError(field, message) {
+    const fieldName = field.name;
+    formState.validationErrors.set(fieldName, message);
+
+    // Add error class
+    field.classList.add('form__input--error', 'form__select--error', 'form__textarea--error');
+    field.classList.remove('form__input--success', 'form__select--success', 'form__textarea--success');
+
+    // Create or update error message
+    let errorElement = field.parentElement.querySelector('.form__error');
+    if (!errorElement) {
+      errorElement = document.createElement('div');
+      errorElement.className = 'form__error';
+      errorElement.setAttribute('role', 'alert');
+      field.parentElement.appendChild(errorElement);
+    }
+    errorElement.textContent = message;
+
+    // Update ARIA
+    field.setAttribute('aria-invalid', 'true');
+    field.setAttribute('aria-describedby', `${fieldName}-error`);
+    errorElement.id = `${fieldName}-error`;
+  }
+
+  /**
+   * Clear error state for a field
+   */
+  function clearFieldError(field) {
+    const errorElement = field.parentElement.querySelector('.form__error');
+    if (errorElement) {
+      errorElement.remove();
+    }
+    field.removeAttribute('aria-invalid');
+    field.removeAttribute('aria-describedby');
+  }
+
+  /**
+   * Get field label text
+   */
+  function getFieldLabel(field) {
+    const label = field.parentElement.querySelector('.form__label');
+    return label ? label.textContent.replace('*', '').trim() : field.name;
+  }
+
+  /**
+   * Set up form submission handling
+   */
+  function setupFormSubmission(form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Prevent double submission
+      if (formState.isSubmitting) return;
+
+      // Check rate limiting
+      if (!checkRateLimit()) {
+        showSubmissionError('Too many submission attempts. Please wait a moment and try again.');
+        return;
+      }
+
+      // Validate all fields
+      const fields = form.querySelectorAll('.form__input, .form__select, .form__textarea');
+      let isValid = true;
+
+      fields.forEach(field => {
+        if (!validateField(field)) {
+          isValid = false;
+        }
+      });
+
+      if (!isValid) {
+        announceToScreenReader('Form contains errors. Please correct them and try again.');
+        // Focus first error field
+        const firstError = form.querySelector('.form__input--error, .form__select--error, .form__textarea--error');
+        if (firstError) {
+          firstError.focus();
+        }
+        return;
+      }
+
+      // Submit form
+      await submitForm(form);
+    });
+  }
+
+  /**
+   * Check rate limiting
+   */
+  function checkRateLimit() {
+    const now = Date.now();
+    
+    // Remove old attempts
+    RATE_LIMIT.attempts = RATE_LIMIT.attempts.filter(
+      timestamp => now - timestamp < RATE_LIMIT.windowMs
+    );
+
+    // Check if limit exceeded
+    if (RATE_LIMIT.attempts.length >= RATE_LIMIT.maxAttempts) {
+      return false;
+    }
+
+    // Add current attempt
+    RATE_LIMIT.attempts.push(now);
+    return true;
+  }
+
+  /**
+   * Submit form data
+   */
+  async function submitForm(form) {
+    formState.isSubmitting = true;
+    
+    // Show loading state
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton.textContent;
+    submitButton.classList.add('btn--loading');
+    submitButton.disabled = true;
+    form.classList.add('form--submitting');
+
+    // Collect form data
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+      // Simulate API call (replace with actual endpoint)
+      await simulateApiCall(data);
+
+      // Success
+      formState.lastSubmission = Date.now();
+      showSubmissionSuccess();
+      clearFormData();
+      form.reset();
+      
+      // Clear validation states
+      const fields = form.querySelectorAll('.form__input, .form__select, .form__textarea');
+      fields.forEach(field => {
+        field.classList.remove('form__input--success', 'form__select--success', 'form__textarea--success');
+        clearFieldError(field);
+      });
+
+      announceToScreenReader('Form submitted successfully! We will contact you soon.');
+
+    } catch (error) {
+      // Error
+      showSubmissionError('Unable to submit form. Please try again later.');
+      announceToScreenReader('Form submission failed. Please try again.');
+      console.error('Form submission error:', error);
+
+    } finally {
+      // Reset loading state
+      formState.isSubmitting = false;
+      submitButton.classList.remove('btn--loading');
+      submitButton.disabled = false;
+      submitButton.textContent = originalButtonText;
+      form.classList.remove('form--submitting');
+    }
+  }
+
+  /**
+   * Simulate API call
+   */
+  function simulateApiCall(data) {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        // Simulate 90% success rate
+        if (Math.random() > 0.1) {
+          resolve({ success: true, data });
+        } else {
+          reject(new Error('Simulated API error'));
+        }
+      }, 1500);
+    });
+  }
+
+  /**
+   * Show submission success message
+   */
+  function showSubmissionSuccess() {
+    const form = document.querySelector('.form');
+    let successElement = form.querySelector('.form__submit-success');
+    
+    if (!successElement) {
+      successElement = document.createElement('div');
+      successElement.className = 'form__submit-success';
+      successElement.setAttribute('role', 'status');
+      successElement.setAttribute('aria-live', 'polite');
+      form.insertBefore(successElement, form.firstChild);
+    }
+
+    successElement.textContent = 'Thank you for contacting us! We will get back to you within 24 hours.';
+    successElement.classList.add('form__submit-success--visible');
+
+    // Hide after 10 seconds
+    setTimeout(() => {
+      successElement.classList.remove('form__submit-success--visible');
+    }, 10000);
+  }
+
+  /**
+   * Show submission error message
+   */
+  function showSubmissionError(message) {
+    const form = document.querySelector('.form');
+    let errorElement = form.querySelector('.form__submit-error');
+    
+    if (!errorElement) {
+      errorElement = document.createElement('div');
+      errorElement.className = 'form__submit-error';
+      errorElement.setAttribute('role', 'alert');
+      errorElement.setAttribute('aria-live', 'assertive');
+      form.insertBefore(errorElement, form.firstChild);
+    }
+
+    errorElement.textContent = message;
+    errorElement.classList.add('form__submit-error--visible');
+
+    // Hide after 10 seconds
+    setTimeout(() => {
+      errorElement.classList.remove('form__submit-error--visible');
+    }, 10000);
+  }
+
+  /**
+   * Set up form persistence with localStorage
+   */
+  function setupFormPersistence(form) {
+    const fields = form.querySelectorAll('.form__input, .form__select, .form__textarea');
+
+    fields.forEach(field => {
+      field.addEventListener('input', () => {
+        saveFormData(form);
+      });
+    });
+  }
+
+  /**
+   * Save form data to localStorage
+   */
+  function saveFormData(form) {
+    try {
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
+      localStorage.setItem('thermocool_contact_form', JSON.stringify(data));
+    } catch (error) {
+      console.warn('Unable to save form data:', error);
+    }
+  }
+
+  /**
+   * Load form data from localStorage
+   */
+  function loadFormData(form) {
+    try {
+      const savedData = localStorage.getItem('thermocool_contact_form');
+      if (!savedData) return;
+
+      const data = JSON.parse(savedData);
+      Object.entries(data).forEach(([name, value]) => {
+        const field = form.querySelector(`[name="${name}"]`);
+        if (field && value) {
+          field.value = value;
+        }
+      });
+    } catch (error) {
+      console.warn('Unable to load form data:', error);
+    }
+  }
+
+  /**
+   * Clear form data from localStorage
+   */
+  function clearFormData() {
+    try {
+      localStorage.removeItem('thermocool_contact_form');
+    } catch (error) {
+      console.warn('Unable to clear form data:', error);
+    }
+  }
+
+  /**
+   * Add ARIA live region for screen reader announcements
+   */
+  function addAriaLiveRegion() {
+    if (document.getElementById('aria-live-region')) return;
+
+    const liveRegion = document.createElement('div');
+    liveRegion.id = 'aria-live-region';
+    liveRegion.className = 'sr-only';
+    liveRegion.setAttribute('role', 'status');
+    liveRegion.setAttribute('aria-live', 'polite');
+    liveRegion.setAttribute('aria-atomic', 'true');
+    document.body.appendChild(liveRegion);
+  }
+
+  /**
+   * Announce message to screen readers
+   */
+  function announceToScreenReader(message) {
+    const liveRegion = document.getElementById('aria-live-region');
+    if (liveRegion) {
+      liveRegion.textContent = message;
+      setTimeout(() => {
+        liveRegion.textContent = '';
+      }, 1000);
+    }
+  }
+
+  // Initialize when DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeApp);
+    document.addEventListener('DOMContentLoaded', initializeForm);
   } else {
-    initializeApp();
+    initializeForm();
   }
 
 })();
