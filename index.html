@@ -31,6 +31,66 @@
   <meta name="theme-color" content="#0066cc">
   <meta name="author" content="ThermoCool">
   <meta name="robots" content="index, follow">
+  
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    "serviceType": "HVAC Services",
+    "provider": {
+      "@type": "LocalBusiness",
+      "name": "ThermoCool",
+      "url": "https://thermocool.example.com",
+      "telephone": "+1234567890",
+      "email": "info@thermocool.com"
+    },
+    "areaServed": {
+      "@type": "GeoCircle",
+      "geoMidpoint": {
+        "@type": "GeoCoordinates"
+      },
+      "geoRadius": "50 miles"
+    },
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "HVAC Services",
+      "itemListElement": [
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "Heating Systems",
+            "description": "Installation, repair, and maintenance of furnaces, boilers, and heat pumps. Keep your home warm and energy-efficient."
+          }
+        },
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "Cooling Solutions",
+            "description": "Expert air conditioning installation, repair, and maintenance. Stay cool and comfortable all summer long."
+          }
+        },
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "Air Quality",
+            "description": "Improve indoor air quality with filtration systems, humidifiers, and ventilation solutions for healthier living."
+          }
+        },
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "Maintenance Plans",
+            "description": "Preventive maintenance programs to extend system life, improve efficiency, and prevent costly breakdowns."
+          }
+        }
+      ]
+    }
+  }
+  </script>
 </head>
 <body>
   <a href="#main" class="skip-link">Skip to main content</a>
@@ -91,42 +151,78 @@
         </header>
         
         <div class="services__grid">
-          <article class="service-card">
+          <article class="service-card" itemscope itemtype="https://schema.org/Service">
             <div class="service-card__icon" aria-hidden="true">
               <span class="icon icon--heating"></span>
             </div>
-            <h3 class="service-card__title">Heating Systems</h3>
-            <p class="service-card__description">
+            <img 
+              src="https://images.unsplash.com/photo-1581094271901-8022df4466f9?w=800&h=600&fit=crop"
+              alt="Modern heating system installation"
+              loading="lazy"
+              decoding="async"
+              width="800"
+              height="600"
+              itemprop="image"
+            >
+            <h3 class="service-card__title" itemprop="name">Heating Systems</h3>
+            <p class="service-card__description" itemprop="description">
               Installation, repair, and maintenance of furnaces, boilers, and heat pumps. Keep your home warm and energy-efficient.
             </p>
           </article>
           
-          <article class="service-card">
+          <article class="service-card" itemscope itemtype="https://schema.org/Service">
             <div class="service-card__icon" aria-hidden="true">
               <span class="icon icon--cooling"></span>
             </div>
-            <h3 class="service-card__title">Cooling Solutions</h3>
-            <p class="service-card__description">
+            <img 
+              src="https://images.unsplash.com/photo-1631545806609-4b0e8b6c2f3e?w=800&h=600&fit=crop"
+              alt="Air conditioning unit maintenance"
+              loading="lazy"
+              decoding="async"
+              width="800"
+              height="600"
+              itemprop="image"
+            >
+            <h3 class="service-card__title" itemprop="name">Cooling Solutions</h3>
+            <p class="service-card__description" itemprop="description">
               Expert air conditioning installation, repair, and maintenance. Stay cool and comfortable all summer long.
             </p>
           </article>
           
-          <article class="service-card">
+          <article class="service-card" itemscope itemtype="https://schema.org/Service">
             <div class="service-card__icon" aria-hidden="true">
               <span class="icon icon--air-quality"></span>
             </div>
-            <h3 class="service-card__title">Air Quality</h3>
-            <p class="service-card__description">
+            <img 
+              src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop"
+              alt="Indoor air quality filtration system"
+              loading="lazy"
+              decoding="async"
+              width="800"
+              height="600"
+              itemprop="image"
+            >
+            <h3 class="service-card__title" itemprop="name">Air Quality</h3>
+            <p class="service-card__description" itemprop="description">
               Improve indoor air quality with filtration systems, humidifiers, and ventilation solutions for healthier living.
             </p>
           </article>
           
-          <article class="service-card">
+          <article class="service-card" itemscope itemtype="https://schema.org/Service">
             <div class="service-card__icon" aria-hidden="true">
               <span class="icon icon--maintenance"></span>
             </div>
-            <h3 class="service-card__title">Maintenance Plans</h3>
-            <p class="service-card__description">
+            <img 
+              src="https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&h=600&fit=crop"
+              alt="HVAC technician performing maintenance"
+              loading="lazy"
+              decoding="async"
+              width="800"
+              height="600"
+              itemprop="image"
+            >
+            <h3 class="service-card__title" itemprop="name">Maintenance Plans</h3>
+            <p class="service-card__description" itemprop="description">
               Preventive maintenance programs to extend system life, improve efficiency, and prevent costly breakdowns.
             </p>
           </article>
